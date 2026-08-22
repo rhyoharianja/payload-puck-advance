@@ -1,12 +1,12 @@
 # payload-puck-advance
 
-Canvas Puck untuk Payload CMS — sebagai **jembatan**, bukan sebagai design system.
+A Puck canvas for Payload CMS that acts as a **bridge**, not as a design system.
 
-Payload yang memiliki definisi blok. Form bawaan Payload yang dipakai menambah dan
-menyusun blok. Puck **hanya merender** dan memberi panel field yang diturunkan dari
-definisi blok itu, saat runtime.
+Payload owns the block definitions. Payload's own form is where blocks are added and
+arranged. Puck **only renders**, and its field panel is derived from those same block
+definitions at runtime.
 
-Paket ini tidak membawa satu pun block, komponen, token, atau CSS.
+This package ships no blocks, no components, no tokens, and no CSS.
 
 ```ts
 payloadPuckAdvance({
@@ -15,70 +15,74 @@ payloadPuckAdvance({
 })
 ```
 
-## Kenapa bentuknya begini
+## Why it is shaped this way
 
-Versi pertama paket ini membawa "contract" sendiri: taksonomi lima lapis, katalog
-section bawaan, token CSS, dan lapisan normalisasi antara Payload dan frontend.
-Semuanya dibuang, karena tiga alasan yang muncul begitu dipakai sungguhan:
+The first version of this package shipped a contract layer of its own: a five-tier
+taxonomy, a built-in section catalogue, CSS tokens, and a normalisation layer between
+Payload and the frontend. All of it was removed, for three reasons that only became
+apparent in real use:
 
-1. **Dua sumber kebenaran.** Menambah satu field berarti mengubah contract, block
-   Payload, dan komponen render — tiga tempat yang harus tetap sinkron secara
-   manual. Yang ketinggalan tidak error, hanya diam-diam hilang.
-2. **Katalog yang bukan milik proyek.** Canvas menawarkan section yang tidak pernah
-   ada di form bawaan, jadi editor bisa menyusun halaman yang tidak bisa disunting
-   di tempat lain.
-3. **Bentuk ketiga.** Lapisan normalisasi menjadi bentuk data ketiga di samping
-   dokumen Payload dan props komponen — dan bentuk ketiga inilah yang selalu
-   ketinggalan versi.
+1. **Two sources of truth.** Adding a single field meant editing the contract, the
+   Payload block, and the render component — three places that had to be kept in sync
+   by hand. Whichever one was forgotten did not raise an error; it simply went missing.
+2. **A catalogue the project did not own.** The canvas offered sections that never
+   appeared in the default form, so editors could assemble pages that could not be
+   edited anywhere else.
+3. **A third shape.** The normalisation layer became a third data shape alongside the
+   Payload document and the component props — and it was invariably the third shape
+   that fell behind.
 
-Sekarang: satu sumber kebenaran (definisi block Payload), satu bentuk data (baris
-`blocks` apa adanya), satu himpunan komponen (dipakai frontend **dan** canvas).
+What remains is one source of truth (the Payload block definitions), one data shape
+(the `blocks` rows exactly as stored), and one set of components, used by both the
+frontend and the canvas.
 
-## Cara kerjanya
+## How it works
 
 ```
-src/blocks/Hero.ts          definisi block Payload      ← SATU-SATUNYA sumber kebenaran
+src/blocks/Hero.ts          Payload block definition      ← THE single source of truth
       │
-      ├──→ form bawaan Payload         (menambah & menyusun blok)
-      ├──→ panel field Puck            (diturunkan saat runtime oleh paket ini)
-      └──→ src/blocks/render.tsx       (komponen React)
+      ├──→ Payload's default form      (add and arrange blocks)
+      ├──→ Puck field panel            (derived at runtime by this package)
+      └──→ src/blocks/render.tsx       (React components)
                  │
-                 ├──→ frontend produksi   lewat <BlockRenderer />
-                 └──→ canvas Puck         lewat renderMap
+                 ├──→ production frontend   via <BlockRenderer />
+                 └──→ Puck canvas           via renderMap
 ```
 
-Yang dikerjakan paket ini, dan hanya ini:
+What this package does, and nothing beyond it:
 
-- membaca definisi block dari client config Payload (`useConfig()`), lalu
-  menurunkan `config.components` Puck darinya
-- memetakan baris `blocks` ↔ data Puck, dua arah
-- memasang view dokumen full-viewport di `/admin/collections/<slug>/<id>/puck`
-- mengganti ikon mata Live Preview dengan dropdown tiga mode
-- memuat & menyimpan lewat REST API Payload, hormat pada draft/versions
-- opsional: hook revalidate saat publish
+- reads block definitions from Payload's client config (`useConfig()`) and derives
+  Puck's `config.components` from them
+- maps `blocks` rows to Puck data and back again
+- mounts a full-viewport document view at
+  `/admin/collections/<slug>/<id>/puck`
+- replaces the Live Preview eye icon with a three-mode selector
+- loads and saves through Payload's REST API, honouring drafts and versions
+- optionally revalidates the frontend on publish
 
-Katalog Puck **sengaja kosong** (`Puck.Components` tidak dirender). Blok ditambah
-di form bawaan; canvas untuk menata dan menyunting isinya.
+The Puck catalogue is **deliberately empty** (`Puck.Components` is never rendered).
+Blocks are added in the default form; the canvas exists to arrange and edit what is
+already there.
 
-## Pemasangan
+## Installation
 
 ```bash
 pnpm add payload-puck-advance
-npx payload-puck-advance init --dry-run   # lihat rencananya dulu
+npx payload-puck-advance init --dry-run   # inspect the plan first
 npx payload-puck-advance init
 pnpm generate:importmap
 ```
 
-`init` menulis file yang **milik proyek Anda** — definisi block contoh, komponen
-render, collection `Pages`, klien data, dan route frontend — lalu menambal
-`payload.config.ts`. Semua file itu ditandai aman: `init` berikutnya tidak akan
-menimpanya tanpa `--force`.
+`init` writes files that **belong to your project** — example block definitions,
+render components, a `Pages` collection, a data client, and the frontend routes — and
+then patches `payload.config.ts`. Those files are marked as yours: a subsequent `init`
+will not overwrite them without `--force`.
 
-Manual? Yang minimal dibutuhkan:
+Prefer to wire it up by hand? The minimum required is:
 
-1. Collection dengan field `blocks` (default bernama `layout`) dan
+1. A collection with a `blocks` field (named `layout` by default) and
    `versions: { drafts: true }`.
-2. `src/blocks/render.tsx` — peta `blockType` → komponen React.
+2. `src/blocks/render.tsx` — a map of `blockType` to React component.
 3. `src/components/PuckView.tsx`:
 
    ```tsx
@@ -89,127 +93,133 @@ Manual? Yang minimal dibutuhkan:
    export const PuckView = createPuckView({ renderMap: blockComponents })
    ```
 
-4. Plugin di `payload.config.ts` seperti contoh di paling atas.
+4. The plugin in `payload.config.ts`, as shown at the top of this document.
 
-## Opsi
+## Options
 
-| Opsi                   | Wajib | Default                                            | Keterangan                                                          |
-| ---------------------- | ----- | -------------------------------------------------- | ------------------------------------------------------------------- |
-| `collections`          | ✔     | —                                                  | Slug collection yang ditempeli. Wajib sudah ada di config.          |
-| `puckViewComponent`    | ✔     | —                                                  | Path komponen view Puck milik aplikasi.                             |
-| `field`                |       | `'layout'`                                         | Nama field `blocks` yang disunting.                                 |
-| `previewModeComponent` |       | `'payload-puck-advance/client#PreviewModeSelect'`  | Dropdown mode; ganti kalau ingin UI sendiri.                        |
-| `puckViewPath`         |       | `'/puck'`                                          | Path view dokumen.                                                  |
-| `revalidate`           |       | `false`                                            | `{ secret, url, headers? }` — dipanggil saat publish.               |
-| `disabled`             |       | `false`                                            | Lewati seluruh plugin (untuk feature flag).                         |
+| Option                 | Required | Default                                            | Description                                                       |
+| ---------------------- | -------- | -------------------------------------------------- | ----------------------------------------------------------------- |
+| `collections`          | ✔        | —                                                  | Slugs of the collections to attach to. They must already exist.    |
+| `puckViewComponent`    | ✔        | —                                                  | Path to your application's Puck view component.                   |
+| `field`                |          | `'layout'`                                         | Name of the `blocks` field to edit.                               |
+| `previewModeComponent` |          | `'payload-puck-advance/client#PreviewModeSelect'`  | The mode selector; replace it to supply your own UI.               |
+| `puckViewPath`         |          | `'/puck'`                                          | Path of the document view.                                        |
+| `revalidate`           |          | `false`                                            | `{ secret, url, headers? }` — called on publish.                  |
+| `disabled`             |          | `false`                                            | Skip the plugin entirely, for use behind a feature flag.          |
 
-Plugin **gagal saat boot** kalau `collections` kosong, kalau slug-nya tidak ada di
-config, atau kalau collection itu tidak punya field `blocks` bernama `field`.
-Itu disengaja: kegagalan diam-diam di sini muncul jauh kemudian sebagai canvas
-kosong tanpa sebab yang jelas.
+The plugin **fails at boot** if `collections` is empty, if a slug is absent from the
+config, or if the target collection has no `blocks` field under the configured name.
+This is deliberate: a silent failure here surfaces much later as an empty canvas with
+no discernible cause.
 
-Opsi `createPuckView`: `renderMap` (wajib), `fieldName`, `fullScreen`,
-`stylesheetFrom`, `syncHostStyles`, `iframeOverride`.
+`createPuckView` accepts `renderMap` (required), `fieldName`, `fullScreen`,
+`stylesheetFrom`, `syncHostStyles`, and `iframeOverride`.
 
-## Tipe field yang didukung
+## Supported field types
 
-Diturunkan otomatis ke field Puck:
+Derived automatically into Puck fields:
 
 `text` · `textarea` · `number` · `select` · `radio` · `checkbox` · `array` ·
-`group` · `blocks` (jadi slot) · `row`/`collapsible`/`tabs` (diratakan)
+`group` · `blocks` (becomes a slot) · `row`/`collapsible`/`tabs` (flattened)
 
-**Sengaja tidak** ditawarkan di Puck: `richText`, `upload`, `relationship`, `join`,
+**Deliberately not** offered in Puck: `richText`, `upload`, `relationship`, `join`,
 `date`, `point`, `code`, `json`, `ui`.
 
-`richText` yang paling penting di daftar itu. Isinya Lexical JSON; menyuguhkannya
-sebagai textarea berarti editor bisa menimpanya dengan teks biasa dan datanya rusak
-tanpa peringatan. Field seperti ini tetap disunting di form bawaan — Puck hanya
-tidak menawarkannya, dan nilainya tidak tersentuh saat menyimpan dari canvas.
+`richText` is the most consequential entry on that list. Its value is Lexical JSON;
+presenting it as a textarea would allow an editor to overwrite it with plain text and
+destroy the content without warning. Fields of this kind continue to be edited in the
+default form — Puck simply does not offer them, and their values are left untouched
+when saving from the canvas.
 
-`checkbox` menjadi radio dua nilai, karena Puck tidak punya field boolean.
+`checkbox` becomes a two-value radio, because Puck has no boolean field.
 
-## Tiga mode penyunting — tanpa field baru
+## Three editing modes, without a new field
 
-Ikon mata Live Preview diganti dropdown berisi tiga pilihan:
+The Live Preview eye icon is replaced by a selector offering three modes:
 
-| Pilihan          | Perilaku                               |
-| ---------------- | -------------------------------------- |
-| **Form**         | form bawaan Payload (default)          |
-| **Live Preview** | Live Preview Payload, apa adanya       |
-| **Puck**         | membuka view Puck di **tab baru**      |
+| Option           | Behaviour                             |
+| ---------------- | ------------------------------------- |
+| **Form**         | Payload's default form (the default)  |
+| **Live Preview** | Payload's Live Preview, unmodified    |
+| **Puck**         | opens the Puck view in a **new tab**  |
 
-### Kenapa bukan slot `PreviewButton`
+### Why not the `PreviewButton` slot
 
-`PreviewButton` hanya dirender kalau `admin.preview` dikonfigurasi — sedangkan ikon
-mata itu `button.live-preview-toggler`, yang tidak punya slot pengganti sama sekali.
-Jadi dropdown dipasang lewat `beforeDocumentControls`, ditambah satu aturan CSS yang
-menyembunyikan toggler aslinya. Satu baris CSS, bukan fork komponen admin.
+`PreviewButton` is only rendered when `admin.preview` is configured, whereas the eye
+icon in question is `button.live-preview-toggler`, which has no replacement slot at
+all. The selector is therefore mounted through `beforeDocumentControls`, alongside a
+single CSS rule that hides the original toggler — one line of CSS rather than a fork
+of an admin component.
 
-### Kenapa Puck di tab baru
+### Why Puck opens in a new tab
 
-Konteks berbeda, bukan sekadar tampilan berbeda: canvas punya state seleksi,
-undo/redo, dan simpan sendiri. Menumpuknya di atas form berarti dua form bersarang
-(`Puck.Fields` selalu merender `<form>`, dan seluruh layout dokumen Payload sudah
-berada di dalam `<form>`) — hydration error, bukan sekadar HTML tidak sah.
+The difference is one of context, not merely of appearance: the canvas maintains its
+own selection state, undo history, and save action. Stacking it on top of the form
+would nest two forms (`Puck.Fields` always renders a `<form>`, and Payload's entire
+document layout already sits inside one), which produces a hydration error rather than
+merely invalid HTML.
 
-Setelah tab dibuka, nilai dropdown **tidak** ikut berpindah ke `puck`. Tab lama
-masih menampilkan form; menandainya "Puck" akan berbohong soal apa yang terlihat.
+Once the tab is open, the selector does **not** switch to `puck`. The original tab
+still shows the form, and labelling it "Puck" would misrepresent what is on screen.
 
-### Penuh viewport, bukan sisa ruang di bawah shell admin
+### Full viewport, not the space left below the admin shell
 
-Payload tidak mengizinkan `views.edit.root` hidup bersama custom view. Jadi view
-Puck dirender sebagai lapisan `position: fixed` seukuran viewport, dengan scroll
-body dikunci selama aktif. Hasilnya sama seperti mengambil alih halaman — tanpa
-mengorbankan custom view.
+Payload does not permit `views.edit.root` to coexist with custom views. The Puck view
+is therefore rendered as a `position: fixed` layer covering the viewport, with body
+scrolling locked while it is active. The result is equivalent to taking over the page,
+without giving up the custom view.
 
-### Header view Puck
+### The Puck view header
 
-Tombol kembali (ke halaman dokumen), status dokumen, pemilih status
-(`#puck-advance-status`), dan tombol simpan (`#puck-advance-save`).
+A back link to the document, the document status, a status selector
+(`#puck-advance-status`), and a save button (`#puck-advance-save`).
 
-Simpan memakai `PATCH ...?draft=true`. Dengan `_status: 'draft'` tulisannya hanya
-masuk tabel versions; dengan `_status: 'published'` dokumen benar-benar terbit —
-`draft=true` di URL tidak menghalanginya.
+Saving issues `PATCH ...?draft=true`. With `_status: 'draft'` the write lands only in
+the versions table; with `_status: 'published'` the document is genuinely published —
+`draft=true` in the URL does not prevent it.
 
-`id` pada elemen-elemen itu ada demi test: label tombol berubah mengikuti status
-dokumen, jadi selector berbasis teks membuat suite ikut bergantung pada state.
+Those `id` attributes exist for the benefit of the test suite: the save button's label
+follows the document status, so a text-based selector would make the suite depend on
+state it does not control.
 
-### CSS canvas: dipinjam dari frontend, bukan disalin
+### Canvas CSS: borrowed from the frontend, not copied
 
-Iframe canvas Puck kosong, dan `syncHostStyles` mengambil CSS **admin** — bukan CSS
-frontend. Akibatnya canvas menampilkan teks polos sementara Live Preview tampil
-bergaya.
+Puck's canvas iframe is empty, and `syncHostStyles` pulls in the **admin** stylesheet
+rather than the frontend's. The visible symptom is a canvas showing unstyled text
+while Live Preview renders correctly.
 
-Solusinya: saat canvas dibuka, halaman frontend (`stylesheetFrom`, default `/`)
-diambil, tag stylesheet-nya dibaca, lalu disuntikkan ke iframe lewat
-`overrides.iframe`. Bukan disalin ke dalam paket — jadi begitu frontend mengubah
-tema, canvas ikut berubah tanpa rebuild apa pun.
+The remedy: when the canvas opens, the frontend page (`stylesheetFrom`, default `/`)
+is fetched, its stylesheet tags are read, and they are injected into the iframe via
+`overrides.iframe`. Nothing is copied into this package, so a change to the frontend
+theme reaches the canvas without any rebuild.
 
-## Menulis block
+## Writing blocks
 
-Definisi Payload biasa, tanpa apa pun yang khusus Puck:
+An ordinary Payload definition, with nothing Puck-specific about it:
 
 ```ts
 export const Hero: Block = {
   slug: 'hero',
-  fields: [{ name: 'heading', type: 'text', label: 'Judul', required: true }],
+  fields: [{ name: 'heading', type: 'text', label: 'Heading', required: true }],
   labels: { plural: 'Hero', singular: 'Hero' },
 }
 ```
 
-Komponennya dipakai di dua konteks dengan komponen yang **sama persis**:
+The component is used in two contexts, and it must be the **very same** component:
 
 ```tsx
 export const blockComponents = { hero: Hero as BlockComponent }
 ```
 
-Kunci peta harus sama dengan `slug` block. Di situlah frontend dan canvas bertemu;
-kalau canvas memakai komponen lain, ia menampilkan sesuatu yang tidak pernah tayang.
+The map keys must match the block slugs. That is where the frontend and the canvas
+meet; if the canvas uses different components, it displays something that will never
+be served.
 
-### Slot (blok di dalam blok)
+### Slots (blocks within blocks)
 
-Field `blocks` di dalam block menjadi slot Puck. Komponennya menerima dua prop:
-isi slot (array di frontend, komponen di canvas) dan `renderSlot`:
+A `blocks` field inside a block becomes a Puck slot. The component receives two
+props: the slot contents (an array on the frontend, a component in the canvas) and
+`renderSlot`:
 
 ```tsx
 export const Grid = ({ items, renderSlot }: { items?: unknown; renderSlot?: (v: unknown) => ReactNode }) => (
@@ -217,68 +227,74 @@ export const Grid = ({ items, renderSlot }: { items?: unknown; renderSlot?: (v: 
 )
 ```
 
-**Jangan** buat slot yang mengizinkan block ber-slot lain, termasuk dirinya sendiri.
-`blockReferences` tidak memutus rekursi: "Kolom di dalam Kolom" tidak punya base
-case dan definisinya meledak jadi `Maximum call stack size exceeded` saat boot.
-Konsekuensinya satu tingkat nesting — batas yang dipilih sadar, bukan bug.
+**Do not** define a slot that admits blocks which themselves contain slots, including
+the block itself. `blockReferences` does not break the recursion: "a Column inside a
+Column" has no base case, and the definition expands until it fails at boot with
+`Maximum call stack size exceeded`. The consequence is a single level of nesting — a
+limit chosen deliberately, not a defect.
 
-### Aturan emas: tanpa margin luar
+### The golden rule: no outer margins
 
-Komponen block mengatur padding dalamnya sendiri, tidak pernah margin luarnya.
-Spacing antar-blok adalah keputusan halaman, bukan keputusan blok — begitu satu blok
-membawa `mt-*`, urutannya tidak lagi bisa ditukar bebas.
+A block component controls its own internal padding and never its outer margin.
+Spacing between blocks is a decision belonging to the page, not to the block: as soon
+as one block carries `mt-*`, blocks can no longer be freely reordered.
 
-## Catatan yang menghemat waktu
+## Notes that will save you time
 
-**Tailwind v4 tidak memindai `node_modules`.** Selama paket ini masih membawa
-komponen sendiri, class-nya hilang dari stylesheet ter-compile tanpa satu pun error —
-gejalanya halaman tanpa gaya meski class-nya benar ada di HTML. Sekarang seluruh
-class ada di `src` proyek, jadi `@source` tidak dibutuhkan lagi. Kalau Anda menaruh
-komponen block di paket sendiri, jebakan itu kembali.
+**Tailwind v4 does not scan `node_modules`.** For as long as this package shipped its
+own components, their classes were silently dropped from the compiled stylesheet — the
+symptom being an unstyled page whose HTML nevertheless contains the correct classes.
+Every class now lives in the project's `src`, so `@source` is no longer required. Move
+block components into a package of your own and the trap returns.
 
-**Batas 63 karakter untuk identifier Postgres.** Blok bersarang membuat nama enum
-seperti `enum_layout_pages_v_blocks_..._new_tab` melewati batas dan push schema
-gagal. Perpendek nama field, atau set `dbName`/`enumName` eksplisit.
+**Postgres identifiers are limited to 63 characters.** Nested blocks produce enum
+names such as `enum_layout_pages_v_blocks_..._new_tab`, which exceed the limit and
+cause the schema push to fail. Shorten the field names, or set `dbName` and `enumName`
+explicitly.
 
-**`export const dynamic` harus literal.** Next membacanya secara statis; `dynamic =
-route.dynamic` diabaikan tanpa peringatan, dan route preview jadi boleh di-cache —
-artinya draft bisa tersaji dari cache.
+**`export const dynamic` must be a literal.** Next reads it statically;
+`dynamic = route.dynamic` is ignored without warning, leaving the preview route
+eligible for caching — which means drafts can be served from cache.
 
-**Jangan `build` paket saat dev server hidup.** Payload sedang membaca `dist/`; hasil
-paling ringannya modul hilang di tengah request. `build` juga menjalankan `clean`
-lebih dulu, karena `swc` tidak memangkas file dari sumber yang sudah dihapus — tanpa
-itu, kode lama tetap tinggal di `dist` dan tampak seperti perubahan yang tidak jalan.
+**Do not build this package while the dev server is running.** Payload is reading
+`dist/`, and the mildest consequence is a module disappearing mid-request. `build`
+also runs `clean` first, because `swc` does not prune files whose sources have been
+deleted; without it, stale code lingers in `dist` and presents itself as a change that
+refuses to take effect.
 
 ## CLI: `payload-puck-advance init`
 
-Dideteksi otomatis: package manager, `src/`, direktori App Router, route group,
-alias impor dari `tsconfig.json`, lokasi `payload.config.ts`, dan apakah slug
-`pages` sudah dipakai (kalau ya, dipakai `puck-pages`).
+Detected automatically: the package manager, `src/`, the App Router directory, the
+route group, the import alias from `tsconfig.json`, the location of
+`payload.config.ts`, and whether the `pages` slug is already taken (in which case
+`puck-pages` is used).
 
-Yang dijamin: `--dry-run` tidak menulis apa pun; tidak pernah menimpa tanpa
-`--force` (dan `--force` membuat `.bak`); bisa dijalankan ulang; dan lebih memilih
-melaporkan langkah manual daripada menebak.
+Guarantees: `--dry-run` writes nothing; existing files are never overwritten without
+`--force` (which creates a `.bak`); the command is safe to run again; and it reports a
+manual step in preference to guessing.
 
-Patching config dilakukan dengan pencarian teks, **bukan** rewriting AST. AST
-terlihat lebih pintar, tapi config Payload di proyek nyata sangat bervariasi —
-dibungkus fungsi, di-spread dari file lain, plugin hasil `.map()` — dan di situ AST
-gagal secara halus. Pencarian teks gagal secara terbuka: kalau tidak yakin, ia
-menolak menyentuh file dan mencetak potongan untuk ditempel.
+Config patching is performed by text search rather than by rewriting the TypeScript
+AST. An AST-based approach looks more capable, but real-world Payload configs vary
+considerably — wrapped in functions, spread from other files, plugins produced by
+`.map()` — and that is precisely where an AST fails quietly. Text search fails
+openly: where it is not confident, it declines to touch the file and prints a snippet
+to paste.
 
-Patcher menyisipkan tiga hal: impor plugin, `Pages` ke array `collections` (wajib —
-plugin melempar error kalau slug-nya tidak terdaftar), dan `livePreview` ke `admin`.
-Taruh komentar `// @puck-advance:plugins` di dalam array `plugins` untuk menentukan
-titik sisipnya sendiri.
+The patcher inserts three things: the plugin import, `Pages` into the `collections`
+array (mandatory — the plugin throws if the slug is not registered), and `livePreview`
+into `admin`. Place a `// @puck-advance:plugins` comment inside the `plugins` array to
+choose the insertion point yourself.
 
-Tanpa alias impor, path komponen di config di-resolve relatif terhadap
-`admin.importMap.baseDir` — nilai yang tidak bisa ditebak dari luar. CLI
-melaporkannya sebagai peringatan alih-alih menebak.
+Without an import alias, component paths in the config are resolved relative to
+`admin.importMap.baseDir`, a value that cannot be inferred from the outside. The CLI
+reports this as a warning rather than guessing.
 
-## Uji runtime
+## Runtime verification
 
-Suite e2e di `payload-boilerplate/tests/e2e/puck.e2e.spec.ts` (19 test) menjaga
-justru hal-hal yang pernah rusak: katalog Puck harus **kosong**, outline hanya berisi
-isi halaman, panel field benar-benar diturunkan dari definisi block Payload, lapisan
-penuh viewport, CSS canvas terpasang, tidak ada form bersarang, tidak ada overlay
-error Next, tombol kembali dan pemilih status ada, serta draft vs publish menulis ke
-tempat yang benar.
+The end-to-end suite in `payload-boilerplate/tests/e2e/puck.e2e.spec.ts` (19 tests)
+guards precisely the things that have broken before: the Puck catalogue must be
+**empty**, the outline must contain only the page's actual contents, the field panel
+must genuinely derive from the Payload block definitions, the full-viewport layer must
+be in place, the canvas CSS must be applied, there must be no nested forms and no Next
+error overlay, the back link and status selector must be present, and drafts and
+publishes must write to the correct place.
