@@ -1,5 +1,18 @@
 # payload-puck-advance
 
+[![Version](https://img.shields.io/badge/Version-0.1.0-1F4C8C?style=for-the-badge)](https://github.com/rhyoharianja/payload-puck-advance)
+[![Payload CMS](https://img.shields.io/badge/Payload_CMS-3.88-000000?style=for-the-badge&logo=payloadcms&logoColor=white)](https://payloadcms.com)
+[![Puck](https://img.shields.io/badge/Puck-0.23-5A67D8?style=for-the-badge)](https://puckeditor.com)
+[![Next.js](https://img.shields.io/badge/Next.js-15_%7C%2016-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org)
+[![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
+
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
+[![Node.js](https://img.shields.io/badge/Node.js-%E2%89%A520.9-339933?style=flat-square&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![pnpm](https://img.shields.io/badge/pnpm-9_%7C%2010_%7C%2011-F69220?style=flat-square&logo=pnpm&logoColor=white)](https://pnpm.io/)
+[![SWC](https://img.shields.io/badge/SWC-bundler-FFCF00?style=flat-square&logo=swc&logoColor=black)](https://swc.rs/)
+[![ESLint](https://img.shields.io/badge/ESLint-9-4B32C3?style=flat-square&logo=eslint&logoColor=white)](https://eslint.org/)
+
 A Puck canvas for Payload CMS that acts as a **bridge**, not as a design system.
 
 Payload owns the block definitions. Payload's own form is where blocks are added and
@@ -298,3 +311,23 @@ must genuinely derive from the Payload block definitions, the full-viewport laye
 be in place, the canvas CSS must be applied, there must be no nested forms and no Next
 error overlay, the back link and status selector must be present, and drafts and
 publishes must write to the correct place.
+
+## Support
+
+If this package saved you time, a contribution is warmly appreciated — though never
+expected. It goes towards keeping the package current with Payload's releases.
+
+<a href="https://paypal.me/sgkharianja" target="_blank">
+  <img src="https://img.shields.io/badge/Donate-PayPal-0070BA?style=for-the-badge&logo=paypal&logoColor=white" alt="Donate with PayPal" height="40"/>
+</a>
+&nbsp;&nbsp;
+<a href="https://saweria.co/rhioharianja" target="_blank">
+  <img src="https://img.shields.io/badge/Saweria-Donate-F97316?style=for-the-badge&logo=ko-fi&logoColor=white" alt="Donate via Saweria" height="40"/>
+</a>
+
+Bug reports and pull requests are equally valuable, and free:
+[open an issue](https://github.com/rhyoharianja/payload-puck-advance/issues).
+
+## License
+
+MIT © Suryo Galih Kencana Harianja. See [LICENSE](LICENSE).
