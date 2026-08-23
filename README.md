@@ -1,6 +1,6 @@
 # payload-puck-advance
 
-[![Version](https://img.shields.io/badge/Version-0.1.0-1F4C8C?style=for-the-badge)](https://github.com/rhyoharianja/payload-puck-advance)
+[![npm](https://img.shields.io/npm/v/payload-puck-advance?style=for-the-badge&logo=npm&logoColor=white&color=CB3837)](https://www.npmjs.com/package/payload-puck-advance)
 [![Payload CMS](https://img.shields.io/badge/Payload_CMS-3.88-000000?style=for-the-badge&logo=payloadcms&logoColor=white)](https://payloadcms.com)
 [![Puck](https://img.shields.io/badge/Puck-0.23-5A67D8?style=for-the-badge)](https://puckeditor.com)
 [![Next.js](https://img.shields.io/badge/Next.js-15_%7C%2016-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org)
@@ -80,7 +80,7 @@ already there.
 ## Installation
 
 ```bash
-pnpm add payload-puck-advance
+pnpm add payload-puck-advance   # or: npm i / yarn add
 npx payload-puck-advance init --dry-run   # inspect the plan first
 npx payload-puck-advance init
 pnpm generate:importmap
