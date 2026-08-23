@@ -317,7 +317,7 @@ publishes must write to the correct place.
 If this package saved you time, a contribution is warmly appreciated — though never
 expected. It goes towards keeping the package current with Payload's releases.
 
-<a href="https://paypal.me/sgkharianja" target="_blank">
+<a href="https://www.paypal.com/paypalme/sgkharianja" target="_blank">
   <img src="https://img.shields.io/badge/Donate-PayPal-0070BA?style=for-the-badge&logo=paypal&logoColor=white" alt="Donate with PayPal" height="40"/>
 </a>
 &nbsp;&nbsp;
