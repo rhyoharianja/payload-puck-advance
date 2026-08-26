@@ -73,9 +73,16 @@ What this package does, and nothing beyond it:
 - loads and saves through Payload's REST API, honouring drafts and versions
 - optionally revalidates the frontend on publish
 
-The Puck catalogue is **deliberately empty** (`Puck.Components` is never rendered).
-Blocks are added in the default form; the canvas exists to arrange and edit what is
-already there.
+The catalogue in the left column lists every block registered in the target
+collection's `blocks` field. It is derived from the **same** Payload definitions that
+produce the field panel, so adding a block in Payload makes it appear here with no
+second list to maintain. Blocks can therefore be added either by dragging from the
+catalogue or through the default form's *Add Layout* button.
+
+Earlier versions hid the catalogue on the grounds that it would be "a second
+catalogue that could drift". That reasoning was wrong — the list has only ever had one
+source — and the cost was real: an editor who opened the canvas found no way at all to
+add content. Set `showComponentList: false` to restore the previous behaviour.
 
 ## Installation
 
@@ -126,7 +133,7 @@ This is deliberate: a silent failure here surfaces much later as an empty canvas
 no discernible cause.
 
 `createPuckView` accepts `renderMap` (required), `fieldName`, `fullScreen`,
-`stylesheetFrom`, `syncHostStyles`, and `iframeOverride`.
+`showComponentList`, `stylesheetFrom`, `syncHostStyles`, and `iframeOverride`.
 
 ## Supported field types
 
@@ -304,13 +311,14 @@ reports this as a warning rather than guessing.
 
 ## Runtime verification
 
-The end-to-end suite in `payload-boilerplate/tests/e2e/puck.e2e.spec.ts` (19 tests)
-guards precisely the things that have broken before: the Puck catalogue must be
-**empty**, the outline must contain only the page's actual contents, the field panel
-must genuinely derive from the Payload block definitions, the full-viewport layer must
-be in place, the canvas CSS must be applied, there must be no nested forms and no Next
-error overlay, the back link and status selector must be present, and drafts and
-publishes must write to the correct place.
+The end-to-end suite in `payload-boilerplate/tests/e2e/puck.e2e.spec.ts` (20 tests)
+guards precisely the things that have broken before: the catalogue must list exactly
+the registered blocks, dragging one onto the canvas must add it, the outline must
+contain only the page's actual contents, the field panel must genuinely derive from
+the Payload block definitions, the full-viewport layer must be in place, the canvas
+CSS must be applied, there must be no nested forms and no Next error overlay, the back
+link and status selector must be present, and drafts and publishes must write to the
+correct place.
 
 ## Support
 

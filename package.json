@@ -1,6 +1,6 @@
 {
   "name": "payload-puck-advance",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A Puck visual editor for existing Payload collections — block definitions stay with Payload",
   "license": "MIT",
   "type": "module",

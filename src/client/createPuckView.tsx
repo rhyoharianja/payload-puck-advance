@@ -38,6 +38,20 @@ export type PuckViewOptions = {
   fullScreen?: boolean
   iframeOverride?: unknown
   /**
+   * Menampilkan katalog block yang bisa ditarik ke canvas. Default `true`.
+   *
+   * Katalognya BUKAN daftar kedua: isinya diturunkan dari definisi block Payload
+   * yang sama dengan yang membentuk panel field — lihat `fromPayloadBlocks`.
+   * Menambah block di Payload otomatis memunculkannya di sini.
+   *
+   * Sempat sengaja disembunyikan dengan alasan "katalog kedua". Alasan itu
+   * keliru, dan akibatnya nyata: blok baru hanya bisa ditambahkan lewat tombol
+   * Add Layout di form Payload, sementara editor yang membuka Puck melihat
+   * canvas tanpa satu pun cara menambah isi — terbaca sebagai editor yang rusak,
+   * bukan sebagai keputusan desain.
+   */
+  showComponentList?: boolean
+  /**
    * Halaman frontend yang stylesheet-nya dipinjam untuk canvas. Default `/`.
    *
    * Canvas Puck adalah iframe KOSONG tempat React merender — ia tidak memuat
@@ -69,6 +83,7 @@ type Status = 'error' | 'idle' | 'loading' | 'saved' | 'saving'
  */
 export const createPuckView = (opts: PuckViewOptions) => {
   const field = opts.fieldName ?? 'layout'
+  const showComponentList = opts.showComponentList ?? true
 
   const PuckView = () => {
     const [data, setData] = useState<Data>(EMPTY_PUCK_DATA as Data)
@@ -417,13 +432,13 @@ export const createPuckView = (opts: PuckViewOptions) => {
             overrides={{ iframe: iframeOverride as never }}
           >
             {/*
-              `Puck.Components` — drawer katalog Puck — SENGAJA tidak dipakai.
-              Definisi blok milik Payload dan form bawaan yang menambahkannya;
-              katalog kedua di sini berarti dua sumber definisi yang bisa menyimpang.
+              Susunannya ditulis sendiri, bukan memakai layout bawaan Puck: tanpa
+              children, Puck ikut merender header dan tombol Publish miliknya —
+              dan Publish adalah wewenang Payload.
 
-              Yang ditampilkan: OUTLINE isi halaman, PREVIEW, dan FIELDS blok
-              terpilih. Tanpa children, Puck juga akan merender header dan tombol
-              Publish miliknya sendiri — dan Publish adalah wewenang Payload.
+              Kolom kiri memuat KATALOG di atas dan OUTLINE di bawah. Keduanya
+              berbagi satu kolom supaya lebar canvas tidak berkurang; katalog di
+              atas karena itu titik mulai saat halaman masih kosong.
             */}
             <div
               style={{
@@ -435,10 +450,32 @@ export const createPuckView = (opts: PuckViewOptions) => {
               <div
                 style={{
                   borderRight: '1px solid var(--theme-elevation-150, #e1e1e1)',
-                  overflow: 'auto',
+                  display: 'grid',
+                  // `minmax(0, …)` pada kedua baris: tanpa itu isi yang panjang
+                  // memaksa barisnya melebar dan `overflow: auto` di dalamnya
+                  // tidak pernah aktif — kolomnya memanjang melewati layar
+                  // alih-alih menggulung.
+                  gridTemplateRows: showComponentList
+                    ? 'minmax(0, 2fr) auto minmax(0, 3fr)'
+                    : 'minmax(0, 1fr)',
+                  height: '100%',
+                  minHeight: 0,
                 }}
               >
-                <Puck.Outline />
+                {showComponentList ? (
+                  <>
+                    <div style={{ overflow: 'auto' }}>
+                      <Puck.Components />
+                    </div>
+                    <div
+                      aria-hidden
+                      style={{ borderTop: '1px solid var(--theme-elevation-150, #e1e1e1)' }}
+                    />
+                  </>
+                ) : null}
+                <div style={{ overflow: 'auto' }}>
+                  <Puck.Outline />
+                </div>
               </div>
               <Puck.Preview />
               <Puck.Fields />
