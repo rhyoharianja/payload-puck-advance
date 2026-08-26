@@ -107,6 +107,10 @@ export const createPuckView = (opts: PuckViewOptions) => {
     const [message, setMessage] = useState<null | string>(null)
     const [docTitle, setDocTitle] = useState('')
     const [docStatus, setDocStatus] = useState<'draft' | 'published'>('draft')
+    // Apa yang dilakukan simpan TERAKHIR — dipakai untuk pesan status. Dipisah dari
+    // `docStatus`, karena menyimpan draft pada dokumen terbit membuat keduanya
+    // berbeda: aksinya draft, dokumennya tetap terbit.
+    const [savedAs, setSavedAs] = useState<'draft' | 'published'>('draft')
 
     // Data terbaru di ref supaya tombol Simpan tidak dibuat ulang tiap ketikan,
     // dan supaya penyimpanan selalu memakai nilai terkini.
@@ -296,34 +300,59 @@ export const createPuckView = (opts: PuckViewOptions) => {
       setStatus('idle')
     }, [])
 
-    const save = useCallback(async () => {
-      setStatus('saving')
-      setMessage(null)
-      try {
-        const res = await fetch(`/api/${collection}/${id}?draft=true`, {
+    /*
+     * Target status adalah ARGUMEN, bukan state.
+     *
+     * Sebelumnya ia dibaca dari sebuah dropdown, sehingga tombol di sebelahnya
+     * harus berganti label mengikuti pilihan — dan hasilnya satu baris berisi
+     * dropdown "Terbitkan" tepat di sebelah tombol "Terbitkan", tanpa cara
+     * membedakan mana yang memilih dan mana yang mengerjakan. Dua tombol dengan
+     * maksud tetap menghilangkan pertanyaan itu seluruhnya.
+     */
+    const save = useCallback(
+      async (target: 'draft' | 'published') => {
+        setStatus('saving')
+        setSavedAs(target)
+        setMessage(null)
+        try {
+          const res = await fetch(`/api/${collection}/${id}?draft=true`, {
+            /*
+             * `draft=true` dipakai untuk KEDUA target. Payload memprioritaskan
+             * `_status` yang eksplisit, jadi `published` tetap menerbitkan meski
+             * permintaannya draft.
+             */
+            body: JSON.stringify({
+              [field]: puckDataToBlocks(latest.current as PuckData, blocks),
+              _status: target,
+            }),
+            credentials: 'include',
+            headers: { 'content-type': 'application/json' },
+            method: 'PATCH',
+          })
+          if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`)
+          }
           /*
-           * `_status` dikirim bersama datanya, dan `draft=true` dipakai untuk KEDUA
-           * status. Payload memprioritaskan `_status` yang eksplisit, jadi
-           * `published` menerbitkan meski permintaannya draft — satu jalur simpan,
-           * satu field yang membedakan.
+           * Status dokumen dibaca dari JAWABAN, tidak disimpulkan dari target.
+           *
+           * Menyimpan draft pada dokumen yang sudah terbit TIDAK menariknya dari
+           * publikasi — versi terbitnya tetap tayang dan yang bertambah hanya versi
+           * kerja. Menandainya "Draft" di header akan berbohong soal apa yang
+           * dilihat pengunjung.
            */
-          body: JSON.stringify({
-            [field]: puckDataToBlocks(latest.current as PuckData, blocks),
-            _status: docStatus,
-          }),
-          credentials: 'include',
-          headers: { 'content-type': 'application/json' },
-          method: 'PATCH',
-        })
-        if (!res.ok) {
-          throw new Error(`HTTP ${res.status}`)
+          const doc = (await res.json().catch(() => null)) as null | Record<string, unknown>
+          const next = (doc?.doc ?? doc) as null | Record<string, unknown>
+          if (next?._status === 'draft' || next?._status === 'published') {
+            setDocStatus(next._status)
+          }
+          setStatus('saved')
+        } catch (err) {
+          setStatus('error')
+          setMessage(err instanceof Error ? err.message : String(err))
         }
-        setStatus('saved')
-      } catch (err) {
-        setStatus('error')
-        setMessage(err instanceof Error ? err.message : String(err))
-      }
-    }, [blocks, collection, docStatus, id])
+      },
+      [blocks, collection, id],
+    )
 
     // Ctrl/Cmd+S menyimpan. Tanpa ini, refleks pertama editor justru memicu dialog
     // simpan halaman milik browser.
@@ -331,7 +360,9 @@ export const createPuckView = (opts: PuckViewOptions) => {
       const onKey = (e: KeyboardEvent) => {
         if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
           e.preventDefault()
-          void save()
+          // Ctrl/Cmd+S menyimpan DRAFT, tidak pernah menerbitkan. Menerbitkan lewat
+          // refleks pintasan adalah hal yang tidak bisa ditarik kembali.
+          void save('draft')
         }
       }
       window.addEventListener('keydown', onKey)
@@ -360,6 +391,13 @@ export const createPuckView = (opts: PuckViewOptions) => {
      * benar-benar menyimpan ke Payload justru yang di baris atas, bukan yang
      * bertuliskan "Publish".
      *
+     * DUA TOMBOL, bukan dropdown + satu tombol. Bentuk sebelumnya menaruh pilihan
+     * "Terbitkan" di dalam dropdown tepat di sebelah tombol bertuliskan
+     * "Terbitkan": tidak ada yang menandai mana yang memilih dan mana yang
+     * mengerjakan, dan tombolnya harus berganti label mengikuti dropdown supaya
+     * tidak berbohong. Dua tombol dengan label tetap membuat kedua aksi terlihat
+     * sekaligus dan menghapus pertanyaannya.
+     *
      * `children` sengaja tidak dirender: isinya tombol Publish bawaan Puck, yang
      * menulis lewat `onPublish` dan melewati draft, versi, serta access control
      * Payload.
@@ -367,42 +405,35 @@ export const createPuckView = (opts: PuckViewOptions) => {
     const headerActions = useCallback(
       () => (
         <div style={{ alignItems: 'center', display: 'flex', gap: '0.5rem' }}>
-          <label className="sr-only" htmlFor="puck-advance-status">
-            Status dokumen
-          </label>
-          <select
-            id="puck-advance-status"
-            onChange={(e) => setDocStatus(e.target.value as 'draft' | 'published')}
-            style={{
-              background: 'var(--theme-input-bg, transparent)',
-              border: '1px solid var(--theme-elevation-150, #d0d0d0)',
-              borderRadius: '4px',
-              color: 'inherit',
-              fontSize: '0.8rem',
-              height: '2.25rem',
-              padding: '0 0.5rem',
-            }}
-            value={docStatus}
+          <button
+            className="btn btn--style-secondary"
+            disabled={status === 'saving'}
+            // Label kedua tombol ini TETAP, tidak mengikuti status dokumen. Label
+            // yang berubah-ubah membuat otomasi bergantung pada state, dan membuat
+            // editor harus membaca ulang tombolnya sebelum berani menekan.
+            id="puck-advance-save"
+            onClick={() => void save('draft')}
+            style={{ margin: 0 }}
+            title="Menyimpan perubahan tanpa menerbitkannya"
+            type="button"
           >
-            <option value="draft">Simpan sebagai draft</option>
-            <option value="published">Terbitkan</option>
-          </select>
+            Simpan draft
+          </button>
 
           <button
             className="btn btn--style-primary"
             disabled={status === 'saving'}
-            // Id stabil supaya otomasi tidak bergantung pada LABEL, yang memang
-            // berubah mengikuti status dokumen.
-            id="puck-advance-save"
-            onClick={() => void save()}
+            id="puck-advance-publish"
+            onClick={() => void save('published')}
             style={{ margin: 0 }}
+            title="Menyimpan dan menayangkan perubahan"
             type="button"
           >
-            {docStatus === 'published' ? 'Terbitkan' : 'Simpan draft'}
+            Terbitkan
           </button>
         </div>
       ),
-      [docStatus, save, status],
+      [save, status],
     )
 
     if (status === 'loading') {
@@ -463,13 +494,49 @@ export const createPuckView = (opts: PuckViewOptions) => {
             <strong style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {docTitle ? `Susunan: ${docTitle}` : 'Susunan halaman'}
             </strong>
+
+            {/*
+              Status dokumen sekarang ditampilkan, bukan disimpulkan.
+
+              Dulu satu-satunya penanda status adalah dropdown di header — yang
+              sebenarnya memilih AKSI, bukan melaporkan keadaan. Setelah dropdown itu
+              diganti dua tombol, tanpa badge ini editor tidak punya cara tahu apakah
+              yang sedang disuntingnya sudah tayang atau belum.
+            */}
+            <span
+              id="puck-advance-doc-status"
+              style={{
+                background:
+                  docStatus === 'published'
+                    ? 'var(--theme-success-100, #d6f0e0)'
+                    : 'var(--theme-elevation-100, #ececec)',
+                borderRadius: '999px',
+                color:
+                  docStatus === 'published'
+                    ? 'var(--theme-success-700, #17603a)'
+                    : 'var(--theme-elevation-700, #4a4a4a)',
+                flexShrink: 0,
+                fontSize: '0.7rem',
+                fontWeight: 600,
+                letterSpacing: '0.02em',
+                padding: '0.15rem 0.5rem',
+                textTransform: 'uppercase',
+              }}
+              title={
+                docStatus === 'published'
+                  ? 'Versi terbit dari halaman ini sedang tayang'
+                  : 'Halaman ini belum pernah diterbitkan'
+              }
+            >
+              {docStatus === 'published' ? 'Terbit' : 'Draft'}
+            </span>
           </div>
 
           <span style={{ fontSize: '0.8rem', opacity: 0.75 }}>
             {status === 'saving'
               ? 'Menyimpan…'
               : status === 'saved'
-                ? docStatus === 'published'
+                ? savedAs === 'published'
                   ? 'Tersimpan dan diterbitkan.'
                   : 'Draft tersimpan.'
                 : status === 'error'

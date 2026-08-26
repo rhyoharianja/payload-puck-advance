@@ -76,9 +76,9 @@ What this package does, and nothing beyond it:
 With the catalogue enabled the view uses Puck's **own layout**: an icon rail on
 the left with Blocks and Outline tabs, a viewport toolbar, and undo/redo in the
 header. Only Puck's Publish button is replaced — via `overrides.headerActions` —
-because publishing is Payload's authority; the save control and draft/publish
-selector sit there instead, on the same row. The bar above it keeps just the back
-link, the document title, and the save status.
+because publishing is Payload's authority; a **Save draft** and a **Publish**
+button sit there instead, on the same row. The bar above it keeps just the back
+link, the document title, its draft/published badge, and the save status.
 
 The catalogue lists every block registered in the target
 collection's `blocks` field. It is derived from the **same** Payload definitions that
@@ -208,16 +208,26 @@ without giving up the custom view.
 
 ### The Puck view header
 
-A back link to the document, the document status, a status selector
-(`#puck-advance-status`), and a save button (`#puck-advance-save`).
+Two buttons with fixed labels: **Save draft** (`#puck-advance-save`) and **Publish**
+(`#puck-advance-publish`). Alongside them, a back link to the document and a badge
+(`#puck-advance-doc-status`) reporting whether the document is a draft or published.
 
-Saving issues `PATCH ...?draft=true`. With `_status: 'draft'` the write lands only in
-the versions table; with `_status: 'published'` the document is genuinely published —
-`draft=true` in the URL does not prevent it.
+Earlier versions offered a status dropdown next to a single save button. That put a
+*Publish* option immediately beside a button reading *Publish*, with nothing to
+distinguish the control that chooses from the control that acts — and the button's
+label had to change with the dropdown to avoid lying about what it would do. Two
+buttons make both actions visible at once and remove the question entirely.
 
-Those `id` attributes exist for the benefit of the test suite: the save button's label
-follows the document status, so a text-based selector would make the suite depend on
-state it does not control.
+Both issue `PATCH ...?draft=true`, differing only in the `_status` they send.
+`draft` writes to the versions table alone; `published` genuinely publishes, since
+Payload gives an explicit `_status` precedence over the `draft=true` in the URL.
+
+Saving a draft on an already-published document does **not** unpublish it: the live
+version keeps serving and only a working version is added. The badge therefore
+reports the status returned by the API rather than the one just requested.
+
+Ctrl/Cmd+S saves a draft and never publishes — publishing on a reflex keystroke is
+not something that can be taken back.
 
 ### Canvas CSS: borrowed from the frontend, not copied
 
