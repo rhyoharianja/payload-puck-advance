@@ -22,21 +22,6 @@ export type PuckViewOptions = {
    * menurunkan panel field dari definisi Payload dan menyambungkan penyimpanannya.
    */
   renderMap: Record<string, unknown>
-  /** Nama field blocks. Default `layout`. */
-  fieldName?: string
-  /**
-   * Merender view sebagai lapisan penuh viewport di atas shell admin.
-   * Default `true`.
-   *
-   * Tanpa ini canvas hanya mendapat sisa ruang di bawah header admin, judul
-   * dokumen, dan tab Edit/Versions/API. Payload tidak mengizinkan
-   * `views.edit.root` berdampingan dengan custom view (`root?: never`), jadi
-   * mengambil alih layout lewat config bukan pilihan — menutupinya mencapai hasil
-   * yang sama sambil tetap mempertahankan konteks dokumen Payload, termasuk
-   * gerbang autentikasinya.
-   */
-  fullScreen?: boolean
-  iframeOverride?: unknown
   /**
    * Mengelompokkan katalog block menjadi beberapa bagian yang bisa dilipat.
    *
@@ -53,6 +38,21 @@ export type PuckViewOptions = {
     string,
     { components?: string[]; defaultExpanded?: boolean; title?: string; visible?: boolean }
   >
+  /** Nama field blocks. Default `layout`. */
+  fieldName?: string
+  /**
+   * Merender view sebagai lapisan penuh viewport di atas shell admin.
+   * Default `true`.
+   *
+   * Tanpa ini canvas hanya mendapat sisa ruang di bawah header admin, judul
+   * dokumen, dan tab Edit/Versions/API. Payload tidak mengizinkan
+   * `views.edit.root` berdampingan dengan custom view (`root?: never`), jadi
+   * mengambil alih layout lewat config bukan pilihan — menutupinya mencapai hasil
+   * yang sama sambil tetap mempertahankan konteks dokumen Payload, termasuk
+   * gerbang autentikasinya.
+   */
+  fullScreen?: boolean
+  iframeOverride?: unknown
   /**
    * Menampilkan katalog block yang bisa ditarik ke canvas. Default `true`.
    *
