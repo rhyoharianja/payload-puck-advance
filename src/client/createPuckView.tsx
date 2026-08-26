@@ -38,6 +38,22 @@ export type PuckViewOptions = {
   fullScreen?: boolean
   iframeOverride?: unknown
   /**
+   * Mengelompokkan katalog block menjadi beberapa bagian yang bisa dilipat.
+   *
+   * Bentuknya `categories` milik Puck: kunci apa saja, `title` untuk judul yang
+   * terlihat, `components` berisi slug block. Slug yang tidak masuk kelompok mana
+   * pun jatuh ke bagian "other" milik Puck, jadi block baru tidak pernah hilang
+   * dari katalog hanya karena lupa dimasukkan ke daftar.
+   *
+   * Tanpa ini katalog tampil sebagai satu daftar panjang. Untuk belasan block itu
+   * cukup; untuk tiga puluh, editor harus menggulir tanpa tahu di mana batas
+   * antar jenis.
+   */
+  categories?: Record<
+    string,
+    { components?: string[]; defaultExpanded?: boolean; title?: string; visible?: boolean }
+  >
+  /**
    * Menampilkan katalog block yang bisa ditarik ke canvas. Default `true`.
    *
    * Katalognya BUKAN daftar kedua: isinya diturunkan dari definisi block Payload
@@ -121,19 +137,39 @@ export const createPuckView = (opts: PuckViewOptions) => {
       return collectBlocks(layoutField as never, cfg?.blocks ?? [])
     }, [collection, payloadConfig])
 
-    const config = useMemo(
-      () =>
-        puckConfigFromPayloadBlocks({
-          blocks,
-          onMissingRender: (slug) =>
-            // Dilewatkan, bukan dijadikan error: proyek yang sudah ada bisa punya
-            // blok yang memang tidak dimaksudkan untuk dirender visual, dan
-            // menggagalkan seluruh editor karena satu blok jauh lebih mahal.
-            console.warn(`[puck-advance] tidak ada komponen render untuk block "${slug}"`),
-          renderMap: opts.renderMap,
-        }) as unknown as Config,
-      [blocks],
-    )
+    const config = useMemo(() => {
+      const built = puckConfigFromPayloadBlocks({
+        blocks,
+        onMissingRender: (slug) =>
+          // Dilewatkan, bukan dijadikan error: proyek yang sudah ada bisa punya
+          // blok yang memang tidak dimaksudkan untuk dirender visual, dan
+          // menggagalkan seluruh editor karena satu blok jauh lebih mahal.
+          console.warn(`[puck-advance] tidak ada komponen render untuk block "${slug}"`),
+        renderMap: opts.renderMap,
+      }) as unknown as Config
+
+      if (!opts.categories) {
+        return built
+      }
+
+      /*
+       * Slug yang disebut di `categories` tapi TIDAK ada di config disaring.
+       *
+       * Puck menampilkan butir katalog untuk setiap slug yang disebut kelompok,
+       * termasuk yang tidak punya komponen — hasilnya butir yang bisa diseret ke
+       * canvas lalu meledak saat dirender. Daftar kelompok biasanya ditulis
+       * tangan, jadi salah ketik di sana adalah hal yang wajar terjadi.
+       */
+      const known = new Set(Object.keys(built.components))
+      const categories = Object.fromEntries(
+        Object.entries(opts.categories).map(([key, category]) => [
+          key,
+          { ...category, components: category.components?.filter((slug) => known.has(slug)) },
+        ]),
+      )
+
+      return { ...built, categories } as Config
+    }, [blocks])
 
     useEffect(() => {
       if (!collection || !id) {
@@ -315,9 +351,64 @@ export const createPuckView = (opts: PuckViewOptions) => {
       }
     }, [])
 
+    /*
+     * Kontrol simpan menggantikan tombol Publish milik Puck, di baris header
+     * yang sama dengan undo/redo dan pemilih peranti.
+     *
+     * Sebelumnya ia berdiri di bar terpisah di atas Puck, jadi ada DUA baris
+     * tombol yang keduanya terlihat seperti tombol utama halaman — dan yang
+     * benar-benar menyimpan ke Payload justru yang di baris atas, bukan yang
+     * bertuliskan "Publish".
+     *
+     * `children` sengaja tidak dirender: isinya tombol Publish bawaan Puck, yang
+     * menulis lewat `onPublish` dan melewati draft, versi, serta access control
+     * Payload.
+     */
+    const headerActions = useCallback(
+      () => (
+        <div style={{ alignItems: 'center', display: 'flex', gap: '0.5rem' }}>
+          <label className="sr-only" htmlFor="puck-advance-status">
+            Status dokumen
+          </label>
+          <select
+            id="puck-advance-status"
+            onChange={(e) => setDocStatus(e.target.value as 'draft' | 'published')}
+            style={{
+              background: 'var(--theme-input-bg, transparent)',
+              border: '1px solid var(--theme-elevation-150, #d0d0d0)',
+              borderRadius: '4px',
+              color: 'inherit',
+              fontSize: '0.8rem',
+              height: '2.25rem',
+              padding: '0 0.5rem',
+            }}
+            value={docStatus}
+          >
+            <option value="draft">Simpan sebagai draft</option>
+            <option value="published">Terbitkan</option>
+          </select>
+
+          <button
+            className="btn btn--style-primary"
+            disabled={status === 'saving'}
+            // Id stabil supaya otomasi tidak bergantung pada LABEL, yang memang
+            // berubah mengikuti status dokumen.
+            id="puck-advance-save"
+            onClick={() => void save()}
+            style={{ margin: 0 }}
+            type="button"
+          >
+            {docStatus === 'published' ? 'Terbitkan' : 'Simpan draft'}
+          </button>
+        </div>
+      ),
+      [docStatus, save, status],
+    )
+
     if (status === 'loading') {
       return <div style={{ padding: '2rem' }}>Memuat susunan halaman…</div>
     }
+
 
     const shell: CSSProperties =
       opts.fullScreen === false
@@ -386,40 +477,6 @@ export const createPuckView = (opts: PuckViewOptions) => {
                   : 'Perubahan belum disimpan'}
           </span>
 
-          <div style={{ alignItems: 'center', display: 'flex', gap: '0.5rem' }}>
-            <label className="sr-only" htmlFor="puck-advance-status">
-              Status dokumen
-            </label>
-            <select
-              id="puck-advance-status"
-              onChange={(e) => setDocStatus(e.target.value as 'draft' | 'published')}
-              style={{
-                background: 'var(--theme-input-bg, transparent)',
-                border: '1px solid var(--theme-elevation-150, #d0d0d0)',
-                borderRadius: '4px',
-                color: 'inherit',
-                fontSize: '0.8rem',
-                height: '2.25rem',
-                padding: '0 0.5rem',
-              }}
-              value={docStatus}
-            >
-              <option value="draft">Simpan sebagai draft</option>
-              <option value="published">Terbitkan</option>
-            </select>
-
-            <button
-              className="btn btn--style-primary"
-              disabled={status === 'saving'}
-              // Id stabil supaya otomasi tidak bergantung pada LABEL, yang memang
-              // berubah mengikuti status dokumen.
-              id="puck-advance-save"
-              onClick={() => void save()}
-              type="button"
-            >
-              {docStatus === 'published' ? 'Terbitkan' : 'Simpan draft'}
-            </button>
-          </div>
         </div>
 
         <div style={{ flex: 1, minHeight: 0 }}>
@@ -429,57 +486,39 @@ export const createPuckView = (opts: PuckViewOptions) => {
             height="100%"
             iframe={{ enabled: true, syncHostStyles: opts.syncHostStyles ?? false }}
             onChange={onChange}
-            overrides={{ iframe: iframeOverride as never }}
+            overrides={{ headerActions: headerActions as never, iframe: iframeOverride as never }}
           >
             {/*
-              Susunannya ditulis sendiri, bukan memakai layout bawaan Puck: tanpa
-              children, Puck ikut merender header dan tombol Publish miliknya —
-              dan Publish adalah wewenang Payload.
+              Dengan katalog menyala, layout BAWAAN Puck yang dipakai: rel ikon
+              Blocks/Outline di kiri, toolbar peranti dan undo/redo di header.
+              Menyusunnya sendiri berarti membangun ulang semua itu dari nol.
+              Yang perlu dicegah hanya satu — tombol Publish milik Puck, karena
+              menerbitkan adalah wewenang Payload — dan itu ditangani
+              `overrides.headerActions`, bukan dengan membuang seluruh layout.
 
-              Kolom kiri memuat KATALOG di atas dan OUTLINE di bawah. Keduanya
-              berbagi satu kolom supaya lebar canvas tidak berkurang; katalog di
-              atas karena itu titik mulai saat halaman masih kosong.
+              Tanpa katalog tidak ada rel tab yang berguna (tinggal satu tab),
+              jadi susunan tiga kolom yang lama tetap dipakai.
             */}
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'minmax(200px, 260px) 1fr minmax(260px, 320px)',
-                height: '100%',
-              }}
-            >
+            {showComponentList ? null : (
               <div
                 style={{
-                  borderRight: '1px solid var(--theme-elevation-150, #e1e1e1)',
                   display: 'grid',
-                  // `minmax(0, …)` pada kedua baris: tanpa itu isi yang panjang
-                  // memaksa barisnya melebar dan `overflow: auto` di dalamnya
-                  // tidak pernah aktif — kolomnya memanjang melewati layar
-                  // alih-alih menggulung.
-                  gridTemplateRows: showComponentList
-                    ? 'minmax(0, 2fr) auto minmax(0, 3fr)'
-                    : 'minmax(0, 1fr)',
+                  gridTemplateColumns: 'minmax(200px, 260px) 1fr minmax(260px, 320px)',
                   height: '100%',
-                  minHeight: 0,
                 }}
               >
-                {showComponentList ? (
-                  <>
-                    <div style={{ overflow: 'auto' }}>
-                      <Puck.Components />
-                    </div>
-                    <div
-                      aria-hidden
-                      style={{ borderTop: '1px solid var(--theme-elevation-150, #e1e1e1)' }}
-                    />
-                  </>
-                ) : null}
-                <div style={{ overflow: 'auto' }}>
+                <div
+                  style={{
+                    borderRight: '1px solid var(--theme-elevation-150, #e1e1e1)',
+                    overflow: 'auto',
+                  }}
+                >
                   <Puck.Outline />
                 </div>
+                <Puck.Preview />
+                <Puck.Fields />
               </div>
-              <Puck.Preview />
-              <Puck.Fields />
-            </div>
+            )}
           </Puck>
         </div>
       </div>

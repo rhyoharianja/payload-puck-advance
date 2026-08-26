@@ -73,7 +73,14 @@ What this package does, and nothing beyond it:
 - loads and saves through Payload's REST API, honouring drafts and versions
 - optionally revalidates the frontend on publish
 
-The catalogue in the left column lists every block registered in the target
+With the catalogue enabled the view uses Puck's **own layout**: an icon rail on
+the left with Blocks and Outline tabs, a viewport toolbar, and undo/redo in the
+header. Only Puck's Publish button is replaced — via `overrides.headerActions` —
+because publishing is Payload's authority; the save control and draft/publish
+selector sit there instead, on the same row. The bar above it keeps just the back
+link, the document title, and the save status.
+
+The catalogue lists every block registered in the target
 collection's `blocks` field. It is derived from the **same** Payload definitions that
 produce the field panel, so adding a block in Payload makes it appear here with no
 second list to maintain. Blocks can therefore be added either by dragging from the
@@ -82,7 +89,16 @@ catalogue or through the default form's *Add Layout* button.
 Earlier versions hid the catalogue on the grounds that it would be "a second
 catalogue that could drift". That reasoning was wrong — the list has only ever had one
 source — and the cost was real: an editor who opened the canvas found no way at all to
-add content. Set `showComponentList: false` to restore the previous behaviour.
+add content. Set `showComponentList: false` to restore the previous behaviour —
+a three-column layout with the outline only, and no tab rail (there would be
+just one tab left).
+
+Pass `categories` to group the catalogue into collapsible sections. It takes
+Puck's own shape (`{ key: { title, components, defaultExpanded } }`) and slugs
+that are not listed fall into Puck's `other` group, so a newly added block can
+never disappear from the catalogue merely because someone forgot to list it.
+Slugs listed but absent from the config are dropped: Puck would otherwise render
+a draggable item with no component behind it.
 
 ## Installation
 
@@ -132,8 +148,9 @@ config, or if the target collection has no `blocks` field under the configured n
 This is deliberate: a silent failure here surfaces much later as an empty canvas with
 no discernible cause.
 
-`createPuckView` accepts `renderMap` (required), `fieldName`, `fullScreen`,
-`showComponentList`, `stylesheetFrom`, `syncHostStyles`, and `iframeOverride`.
+`createPuckView` accepts `renderMap` (required), `categories`, `fieldName`,
+`fullScreen`, `showComponentList`, `stylesheetFrom`, `syncHostStyles`, and
+`iframeOverride`.
 
 ## Supported field types
 
@@ -311,9 +328,10 @@ reports this as a warning rather than guessing.
 
 ## Runtime verification
 
-The end-to-end suite in `payload-boilerplate/tests/e2e/puck.e2e.spec.ts` (20 tests)
-guards precisely the things that have broken before: the catalogue must list exactly
-the registered blocks, dragging one onto the canvas must add it, the outline must
+The end-to-end suite in `payload-boilerplate/tests/e2e/puck.e2e.spec.ts` (21 tests)
+guards precisely the things that have broken before: the catalogue must show every
+configured group and list exactly the registered blocks, dragging one onto the
+canvas must add it, the outline must
 contain only the page's actual contents, the field panel must genuinely derive from
 the Payload block definitions, the full-viewport layer must be in place, the canvas
 CSS must be applied, there must be no nested forms and no Next error overlay, the back
