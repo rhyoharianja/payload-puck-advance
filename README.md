@@ -28,6 +28,10 @@ payloadPuckAdvance({
 })
 ```
 
+![The Puck canvas: block catalogue on the left, the page rendered in the centre, field panel on the right](https://raw.githubusercontent.com/rhyoharianja/payload-puck-advance/main/docs/canvas-puck.png)
+
+<sub>The canvas renders the page with the application's own components — the same ones the production frontend uses.</sub>
+
 ## Why it is shaped this way
 
 The first version of this package shipped a contract layer of its own: a five-tier
@@ -85,6 +89,10 @@ collection's `blocks` field. It is derived from the **same** Payload definitions
 produce the field panel, so adding a block in Payload makes it appear here with no
 second list to maintain. Blocks can therefore be added either by dragging from the
 catalogue or through the default form's *Add Layout* button.
+
+![Payload's default edit form, showing the layout blocks field and its Add Layout button](https://raw.githubusercontent.com/rhyoharianja/payload-puck-advance/main/docs/form-bawaan.png)
+
+<sub>Payload's form is untouched: the layout lives in an ordinary `blocks` field with its own *Add Layout* button, and the mode selector sits among the document controls.</sub>
 
 Earlier versions hid the catalogue on the grounds that it would be "a second
 catalogue that could drift". That reasoning was wrong — the list has only ever had one
@@ -170,6 +178,10 @@ when saving from the canvas.
 
 `checkbox` becomes a two-value radio, because Puck has no boolean field.
 
+![A block selected in the canvas, with its field panel on the right](https://raw.githubusercontent.com/rhyoharianja/payload-puck-advance/main/docs/panel-field.png)
+
+<sub>Selecting a block fills the panel with its fields — labels, types and order all taken from the Payload block definition, not from a second schema.</sub>
+
 ## Three editing modes, without a new field
 
 The Live Preview eye icon is replaced by a selector offering three modes:
@@ -179,6 +191,10 @@ The Live Preview eye icon is replaced by a selector offering three modes:
 | **Form**         | Payload's default form (the default)  |
 | **Live Preview** | Payload's Live Preview, unmodified    |
 | **Puck**         | opens the Puck view in a **new tab**  |
+
+![The mode selector among the document controls, in place of the Live Preview eye icon](https://raw.githubusercontent.com/rhyoharianja/payload-puck-advance/main/docs/pemilih-mode.png)
+
+<sub>The selector takes the eye icon's place. Nothing else on the page changes.</sub>
 
 ### Why not the `PreviewButton` slot
 
@@ -228,6 +244,10 @@ reports the status returned by the API rather than the one just requested.
 
 Ctrl/Cmd+S saves a draft and never publishes — publishing on a reflex keystroke is
 not something that can be taken back.
+
+![The Puck view header: back link, document title, status badge, undo/redo, and the Save draft and Publish buttons](https://raw.githubusercontent.com/rhyoharianja/payload-puck-advance/main/docs/header.png)
+
+<sub>Both save controls sit on Puck's own header row, beside undo/redo.</sub>
 
 ### Canvas CSS: borrowed from the frontend, not copied
 

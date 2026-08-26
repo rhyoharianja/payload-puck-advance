@@ -86,6 +86,39 @@ export type PuckViewOptions = {
 type Status = 'error' | 'idle' | 'loading' | 'saved' | 'saving'
 
 /**
+ * Geometri kedua tombol simpan — ditulis inline, bukan diserahkan ke class `.btn`
+ * Payload.
+ *
+ * Class-nya dipertahankan supaya WARNA tetap mengikuti tema admin, tapi geometrinya
+ * tidak bisa: di dalam DOM Puck, `.btn` menghasilkan tinggi 24px dengan padding NOL,
+ * jadi teksnya menempel ke tepi dan tombolnya lebih pendek daripada undo/redo di
+ * sebelahnya (32px). Style inline mengalahkan stylesheet, jadi ini memperbaiki
+ * ukurannya tanpa menyentuh CSS admin milik siapa pun.
+ *
+ * Satuannya PIXEL, bukan rem: `rem` di konteks ini terhitung dari root 13px, jadi
+ * `0.7rem` menjadi 9,1px — ukuran yang tidak pernah dimaksudkan siapa pun.
+ */
+const controlBase: CSSProperties = {
+  alignItems: 'center',
+  border: '1px solid transparent',
+  borderRadius: 4,
+  cursor: 'pointer',
+  display: 'inline-flex',
+  fontSize: 13,
+  fontWeight: 500,
+  gap: 6,
+  // Tinggi disamakan dengan tombol bawaan Puck di baris yang sama. Selisih 8px
+  // pada baris yang sama terbaca sebagai "kurang rapi" jauh sebelum orang bisa
+  // menunjuk penyebabnya.
+  height: 32,
+  justifyContent: 'center',
+  lineHeight: 1,
+  margin: 0,
+  padding: '0 14px',
+  whiteSpace: 'nowrap',
+}
+
+/**
  * View Puck untuk satu dokumen, dibuka di tab baru.
  *
  * Puck di sini HANYA MERENDER: blok didefinisikan di Payload (di aplikasi Anda,
@@ -404,7 +437,7 @@ export const createPuckView = (opts: PuckViewOptions) => {
      */
     const headerActions = useCallback(
       () => (
-        <div style={{ alignItems: 'center', display: 'flex', gap: '0.5rem' }}>
+        <div style={{ alignItems: 'center', display: 'flex', gap: 8 }}>
           <button
             className="btn btn--style-secondary"
             disabled={status === 'saving'}
@@ -413,7 +446,12 @@ export const createPuckView = (opts: PuckViewOptions) => {
             // editor harus membaca ulang tombolnya sebelum berani menekan.
             id="puck-advance-save"
             onClick={() => void save('draft')}
-            style={{ margin: 0 }}
+            style={{
+              ...controlBase,
+              background: 'var(--theme-input-bg, transparent)',
+              border: '1px solid var(--theme-elevation-150, #d5d5d5)',
+              color: 'inherit',
+            }}
             title="Menyimpan perubahan tanpa menerbitkannya"
             type="button"
           >
@@ -425,7 +463,7 @@ export const createPuckView = (opts: PuckViewOptions) => {
             disabled={status === 'saving'}
             id="puck-advance-publish"
             onClick={() => void save('published')}
-            style={{ margin: 0 }}
+            style={controlBase}
             title="Menyimpan dan menayangkan perubahan"
             type="button"
           >
@@ -510,16 +548,20 @@ export const createPuckView = (opts: PuckViewOptions) => {
                   docStatus === 'published'
                     ? 'var(--theme-success-100, #d6f0e0)'
                     : 'var(--theme-elevation-100, #ececec)',
-                borderRadius: '999px',
+                borderRadius: 999,
                 color:
                   docStatus === 'published'
                     ? 'var(--theme-success-700, #17603a)'
                     : 'var(--theme-elevation-700, #4a4a4a)',
                 flexShrink: 0,
-                fontSize: '0.7rem',
+                // Pixel, bukan rem: root di sini 13px, jadi `0.7rem` terhitung
+                // 9,1px — terlalu kecil untuk dibaca, dan bukan angka yang dipilih
+                // siapa pun secara sadar.
+                fontSize: 11,
                 fontWeight: 600,
-                letterSpacing: '0.02em',
-                padding: '0.15rem 0.5rem',
+                letterSpacing: '0.04em',
+                lineHeight: 1,
+                padding: '5px 9px',
                 textTransform: 'uppercase',
               }}
               title={
