@@ -4,6 +4,8 @@ import type { PluginFactory, PuckAdvanceConfig, ResolvedOptions } from './types.
 
 import { buildRevalidateHook } from './hooks/revalidate.js'
 
+import { findBlocksField } from './findBlocksField.js'
+
 export * from './types.js'
 
 /**
@@ -59,15 +61,18 @@ export const payloadPuckAdvance =
   }
 
 const attach = (collection: CollectionConfig, opts: ResolvedOptions): CollectionConfig => {
-  const layout = (collection.fields ?? []).find(
-    (f) => (f as { name?: string }).name === opts.field,
-  )
+  // Menelusuri tabs/group/array/collapsible/row, bukan hanya tingkat teratas:
+  // menaruh field layout di dalam sebuah tab adalah susunan yang lumrah, dan dulu
+  // itu membuat plugin menolak boot.
+  const layout = findBlocksField(collection.fields, opts.field)
 
-  if (!layout || (layout as { type?: string }).type !== 'blocks') {
+  if (!layout) {
     throw new Error(
       `[puck-advance] collection "${collection.slug}" tidak punya field blocks bernama ` +
         `"${opts.field}". Penyunting ini merender field blocks — buat field-nya lebih ` +
-        'dulu, atau set opsi `field` ke nama yang benar.',
+        'dulu, atau set opsi `field` ke nama yang benar. Field di dalam tab, group, ' +
+        'array, collapsible, maupun row ikut dicari; field di DALAM sebuah block ' +
+        'sengaja tidak.',
     )
   }
 

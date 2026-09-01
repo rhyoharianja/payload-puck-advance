@@ -12,6 +12,7 @@ import type { PayloadBlock } from './fromPayloadBlocks.js'
 
 import { blocksToPuckData, EMPTY_PUCK_DATA, puckDataToBlocks } from './blocksData.js'
 import { collectBlocks, puckConfigFromPayloadBlocks } from './fromPayloadBlocks.js'
+import { findBlocksField } from '../findBlocksField.js'
 
 export type PuckViewOptions = {
   /**
@@ -81,6 +82,14 @@ export type PuckViewOptions = {
    * canvas tampak seperti panel admin dan bukan seperti produksi.
    */
   syncHostStyles?: boolean
+}
+
+/** Bentuk field pada config CLIENT Payload — cukup untuk menelusuri susunannya. */
+type ClientField = {
+  fields?: ClientField[]
+  name?: string
+  tabs?: { fields?: ClientField[] }[]
+  type?: string
 }
 
 type Status = 'error' | 'idle' | 'loading' | 'saved' | 'saving'
@@ -162,15 +171,23 @@ export const createPuckView = (opts: PuckViewOptions) => {
      * duplikasi definisi, dan proyek yang sudah ada bisa memakai keduanya.
      */
     const blocks: PayloadBlock[] = useMemo(() => {
+      /*
+       * Bentuk field sengaja LONGGAR (`ClientField`), bukan `{ name, type }` datar.
+       *
+       * Bentuk yang datar itu membuat `tabs` dan `fields` bersarang tidak terbaca
+       * sama sekali, sehingga field layout di dalam sebuah tab tidak pernah ketemu —
+       * dan katalog tampil kosong tanpa satu pun galat. Tipe yang terlalu sempit di
+       * sini bukan sekadar soal kerapian: ia menyembunyikan data yang memang ada.
+       */
       const cfg = payloadConfig as unknown as
-        | {
-            blocks?: PayloadBlock[]
-            collections?: { fields?: { name?: string; type: string }[]; slug: string }[]
-          }
+        | { blocks?: PayloadBlock[]; collections?: { fields?: ClientField[]; slug: string }[] }
         | undefined
 
       const coll = cfg?.collections?.find((c) => c.slug === collection)
-      const layoutField = coll?.fields?.find((f) => f.name === field && f.type === 'blocks')
+      // Fungsi yang SAMA dengan validasi saat boot. Kalau keduanya berbeda, salah
+      // satunya akan lolos sementara yang lain gagal — dan yang gagal di sini tidak
+      // bersuara.
+      const layoutField = findBlocksField(coll?.fields, field)
       return collectBlocks(layoutField as never, cfg?.blocks ?? [])
     }, [collection, payloadConfig])
 

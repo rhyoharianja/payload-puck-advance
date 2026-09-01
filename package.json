@@ -1,6 +1,6 @@
 {
   "name": "payload-puck-advance",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "A Puck visual editor for existing Payload collections — block definitions stay with Payload",
   "license": "MIT",
   "type": "module",
@@ -38,7 +38,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "watch": "swc ./src -d ./dist --config-file .swcrc --strip-leading-paths --watch",
-    "prepublishOnly": "pnpm clean && pnpm build"
+    "prepublishOnly": "pnpm clean && pnpm build && vitest run"
   },
   "devDependencies": {
     "@payloadcms/eslint-config": "3.28.0",
